@@ -2,10 +2,10 @@
 This website is built to connect the people with health consulatants.
 
 ## Tech Stack
-MongoDB
-Express
-ReactJS
-Node.js
+MongoDB <br/>
+Express <br/>
+ReactJS <br/>
+Node.js <br/>
 
 ## Introduction
 > All consultations, therapy, workshops, educational training, resort booking etc. comes under this.
@@ -21,18 +21,18 @@ Node.js
 * Pharma Support
 
 ## Project
-[ ] Account Creation
-[ ] Subscription
-[ ] Video Call - One to One
-[ ] Webinar Hosting - One to Many
-[ ] Appointment with Psychiatarist
-[ ] Payment Integration
-[ ] Corporate Packages 
-[ ] Educational Institution Packages
-[ ] Enquiries
-[ ] Report Generation
+- [ ] Account Creation
+- [ ] Subscription
+- [ ] Video Call - One to One
+- [ ] Webinar Hosting - One to Many
+- [ ] Appointment with Psychiatarist
+- [ ] Payment Integration
+- [ ] Corporate Packages 
+- [ ] Educational Institution Packages
+- [ ] Enquiries
+- [ ] Report Generation
 
-### Contributors
-[Jaspreet Singh](https://www.github.com/jaspreet8843)
+## Contributors
+[Jaspreet Singh](https://www.github.com/jaspreet8843) <br/>
 [Manab Saha](https://wwww.github.com/manabsaha)
 
