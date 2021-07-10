@@ -36,7 +36,7 @@ io.on('connection', socket => {
         socket.on('disconnect', () => {
             io.to(roomId).emit('user-disconnected', userId);
         })
-  })
+  });
 })
 
 server.listen(3001,()=>{

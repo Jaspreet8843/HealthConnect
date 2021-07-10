@@ -14,75 +14,80 @@ export default function Video(){
         port: '3002'
     })
 
-    //4. my video
-    const myvideo = document.createElement('video');
-    myvideo.muted = true;
+    useEffect(()=>{
 
-    navigator.mediaDevices.getUserMedia({
-        video : true,
-        audio : true
-    }).then(stream =>{
-        addVideoStream(myvideo,stream);
-        //6. Answer call
-        myPeer.on('call',call =>{
-            call.answer(stream);
-            const video = document.createElement('video');
-            call.on('stream',userVideoStream =>{
-                addVideoStream(video,userVideoStream);
+        //4. my video
+        const myvideo = document.createElement('video');
+        myvideo.muted = true;
+
+        navigator.mediaDevices.getUserMedia({
+            video : true,
+            audio : true
+        })
+        .then(stream =>{
+            
+            addVideoStream(myvideo,stream);
+            
+            //6. Answer call
+            myPeer.on('call',call =>{
+                call.answer(stream);
+                const video = document.createElement('video');
+                call.on('stream',userVideoStream =>{
+                    addVideoStream(video,userVideoStream);
+                },err=>{
+                    console.log(err);
+                })
+            })
+
+            //5. Connect and send video
+            socket.on('user-connected',userId =>{
+                console.log("New user: "+userId);
+                connectToNewUser(userId,stream);
             })
         })
-        //5. Connect and send video
-        socket.on('user-connected',userId =>{
-            console.log("user connected");
-            connectToNewUser(userId,stream);
+
+        //function definition
+        function connectToNewUser(userId,stream){
+            const call = myPeer.call(userId,stream);
+            const video = document.createElement('video');
+            //call user
+            myPeer.on('stream',userVideoStream =>{
+                //not running
+                console.log("on call");
+                addVideoStream(video,userVideoStream);
+            },err=>{
+                console.log(err);
+            });
+            call.on('close', ()=>{
+                video.remove();
+            });
+        }
+
+        //function definition
+        function addVideoStream(myvideo,stream){
+            myvideo.srcObject = stream;
+            
+            myvideo.addEventListener('loadedmetadata', ()=>{
+                myvideo.play();
+            })
+           
+            const videogrid = document.getElementById('video-grid');
+            videogrid.append(myvideo);
+        }
+
+        //7. Disconnected
+        socket.on('user-disconnected',userId=>{
+            console.log("user disconnected: "+userId);
         })
-    })
 
-    //function definition
-    function connectToNewUser(userId,stream){
-        console.log(userId);
-        const call = myPeer.call(userId,stream);
-        const video = document.createElement('video');
-        call.on('stream',userVideoStream =>{
-            addVideoStream(video,userVideoStream);
-        });
-        call.on('close', ()=>{
-            video.remove();
-        });
-    }
-
-    //function definition
-    function addVideoStream(myvideo,stream){
-        myvideo.srcObject = stream;
-        myvideo.addEventListener('loadedmetadata', ()=>{
-            myvideo.play();
+        //3. Join room - peer js ID
+        myPeer.on('open',id=>{
+            console.log(id);
+            socket.emit('join-room',roomId,id);
         })
-        const videogrid = document.getElementById('video-grid');
-        videogrid.append(myvideo);
-    }
-
-    //7. Disconnected
-    socket.on('user-disconnected',userId=>{
-        console.log("user disconnected: "+userId);
-    })
-
-    //3. peerjs connection
-    myPeer.on('open',id=>{
-        //join room
-        console.log(id);
-        socket.emit('join-room',roomId,id);
-    })
-
-    //1. broadcast message - test code
-    // socket.on('user-connected',userId =>{
-    //     console.log("User connected: "+userId)
-    // })
-
+    },[])
 
     return(
-        <div id="video-grid">
-            This is a video grid cell.
-        <script defer src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
-        </div>
+        <div id="video-grid"></div>
     )
 }
