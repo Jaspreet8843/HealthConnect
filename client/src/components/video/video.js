@@ -7,14 +7,24 @@ import Peer from 'peerjs';
 const socket = io(baseUrl, { transports: ['websocket', 'polling', 'flashsocket'] });
 
 export default function Video(){
-    const roomId = useParams().roomId;
+    //1. Room ID
+    const roomId = useParams().roomId;    
+
     //2. Peer object
-    const myPeer = new Peer(undefined, {
+    const myPeer = new Peer({
         host: '/',
-        port: '3002'
+        port: '3002',
     })
 
     useEffect(()=>{
+        
+        const videogrid = document.getElementById('video-grid');
+
+        //3. Join room - peer js ID
+        myPeer.on('open',id=>{
+            console.log("Your id: ",id);
+            socket.emit('join-room',roomId,id);
+        })
 
         //4. my video
         const myvideo = document.createElement('video');
@@ -27,64 +37,59 @@ export default function Video(){
         .then(stream =>{
             
             addVideoStream(myvideo,stream);
-            
-            //6. Answer call
-            myPeer.on('call',call =>{
-                call.answer(stream);
-                const video = document.createElement('video');
-                call.on('stream',userVideoStream =>{
-                    addVideoStream(video,userVideoStream);
-                },err=>{
-                    console.log(err);
-                })
-            })
 
             //5. Connect and send video
             socket.on('user-connected',userId =>{
                 console.log("New user: "+userId);
-                connectToNewUser(userId,stream);
+                //waiting for navigator   
+                setTimeout(connectToNewUser,3000,userId,stream);
+            })
+            
+            //6. Answer call
+            myPeer.on('call',call =>{
+                console.log("call");
+                //Answer incoming call and receive the stream
+                call.answer(stream);
+                const video = document.createElement('video');
+                call.on('stream',userVideoStream =>{
+                    console.log(userVideoStream);
+                    addVideoStream(video,userVideoStream);
+                })
             })
         })
-
-        //function definition
-        function connectToNewUser(userId,stream){
-            const call = myPeer.call(userId,stream);
-            const video = document.createElement('video');
-            //call user
-            myPeer.on('stream',userVideoStream =>{
-                //not running
-                console.log("on call");
-                addVideoStream(video,userVideoStream);
-            },err=>{
-                console.log(err);
-            });
-            call.on('close', ()=>{
-                video.remove();
-            });
-        }
-
-        //function definition
-        function addVideoStream(myvideo,stream){
-            myvideo.srcObject = stream;
-            
-            myvideo.addEventListener('loadedmetadata', ()=>{
-                myvideo.play();
-            })
-           
-            const videogrid = document.getElementById('video-grid');
-            videogrid.append(myvideo);
-        }
 
         //7. Disconnected
         socket.on('user-disconnected',userId=>{
             console.log("user disconnected: "+userId);
         })
 
-        //3. Join room - peer js ID
-        myPeer.on('open',id=>{
-            console.log(id);
-            socket.emit('join-room',roomId,id);
-        })
+        //function definition
+        function addVideoStream(myvideo,stream){
+            myvideo.srcObject = stream;
+            myvideo.addEventListener('loadedmetadata', ()=>{
+                myvideo.play();
+            })
+            //append video to html div
+            videogrid.append(myvideo);
+        }
+
+        //function definition
+        function connectToNewUser(userId,stream){
+            const calling = myPeer.call(userId,stream);
+            const video = document.createElement('video');
+
+            //stream event fired when other person receives call with their stream
+            calling.on('stream',userVideoStream =>{
+                console.log("on calling");
+                addVideoStream(video,userVideoStream);
+            });
+            
+            //remove video when peer is closed
+            calling.on('close', ()=>{
+                video.remove();
+            });
+        }
+
     },[])
 
     return(
