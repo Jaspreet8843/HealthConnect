@@ -15,6 +15,7 @@ export default function Video(){
         host: '/',
         port: '3002',
     })
+    const peers = {};
 
     useEffect(()=>{
         
@@ -39,28 +40,32 @@ export default function Video(){
             addVideoStream(myvideo,stream);
 
             //5. Connect and send video
-            socket.on('user-connected',userId =>{
-                console.log("New user: "+userId);
-                //waiting for navigator   
-                setTimeout(connectToNewUser,3000,userId,stream);
+            socket.on('new-user-connected',userId =>{
+                if(userId!=myPeer.id){
+                    console.log("New user: "+userId);
+                    connectToNewUser(userId,stream);
+                    // setTimeout(connectToNewUser,3000,userId,stream);
+                }
             })
-            
+
             //6. Answer call
             myPeer.on('call',call =>{
-                console.log("call");
                 //Answer incoming call and receive the stream
                 call.answer(stream);
                 const video = document.createElement('video');
                 call.on('stream',userVideoStream =>{
-                    console.log(userVideoStream);
                     addVideoStream(video,userVideoStream);
                 })
             })
+
+            //emit connection request when promise completed
+            socket.emit('connection-request',roomId,myPeer.id);
         })
 
         //7. Disconnected
         socket.on('user-disconnected',userId=>{
             console.log("user disconnected: "+userId);
+            if (peers[userId]) peers[userId].close();
         })
 
         //function definition
@@ -80,7 +85,6 @@ export default function Video(){
 
             //stream event fired when other person receives call with their stream
             calling.on('stream',userVideoStream =>{
-                console.log("on calling");
                 addVideoStream(video,userVideoStream);
             });
             
@@ -88,6 +92,8 @@ export default function Video(){
             calling.on('close', ()=>{
                 video.remove();
             });
+
+            peers[userId] = calling;
         }
 
     },[])

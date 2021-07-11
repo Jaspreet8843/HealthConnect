@@ -5,7 +5,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const server = require('http').Server(app)
 const io = require('socket.io')(server)
-const { v4: uuidV4 } = require('uuid')
+const { v4: uuidV4 } = require('uuid');
+const { userInfo } = require('os');
 app.use(cors({
     origin: ["http://localhost:3000"],
     methods: ["GET", "POST"],
@@ -28,7 +29,6 @@ app.get('/:room', (req, res) => {
 io.on('connection', socket => {
     //join room
     socket.on('join-room', (roomId, userId) => {
-        console.log(roomId,userId);
         socket.join(roomId)
         //new user connected message
         io.to(roomId).emit('user-connected', userId);
@@ -36,7 +36,12 @@ io.on('connection', socket => {
         socket.on('disconnect', () => {
             io.to(roomId).emit('user-disconnected', userId);
         })
-  });
+    });
+    socket.on('connection-request',(roomId,userId)=>{
+        //new user connected message
+        io.to(roomId).emit('new-user-connected',userId);
+    })
+
 })
 
 server.listen(3001,()=>{
