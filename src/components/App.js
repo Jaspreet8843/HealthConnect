@@ -52,19 +52,49 @@ function App() {
   
 //####################### FUNCTIONS ############################
 
+
+
   function SendReceive(){
-    conn.current.on('open',()=>{
-      notification.current.innerHTML = "CONNECTION ESTABLISHED";             //notifies user that connection is established
-      setTimeout(() => { notification.current.innerHTML = ""}, 4000);        //hides the notification after 4 secs
-      conn.current.on('data', function(data){
-        receivedMessage.current.innerText = "Received: "+data;                //displays received data
-      })
-    })
-    conn.current.on('close', () => {
-        receivedVideo.current.style.display="none";                            //hides video element
-        notification.current.innerHTML = "CONNECTION CLOSED";                  //notifies user that connection is closed
+    connections.current.forEach((element) => {                                 //run listener for all connections
+      element.on('open',()=>{
+        connections.current.forEach((ele) => {
+          if(element.peer!==ele.peer){
+            element.send({connections:ele.peer});                              //send my connections to all connections
+          }
+        });
+
+        element.on('data', function(data){
+          if(data.control === 'disconnectCall'){                                 
+            calls.current.close();                                                         //workaround to disconnect call bug
+          }
+          if(data.message)
+          {
+            receivedMessage.current.innerText = "Received: "+data.message;                //displays received data
+          }
+          if(data.connections)
+          {
+            // var flag = 0;
+            // connections.current.forEach((e)=>{if(data.connections===e.peer){flag=1;}});
+            // if(flag===0){
+            if(connections.current.findIndex(x => x.peer===data.connections)===-1){      //if received connection is not found in connections array
+              conn.current = peer.current.connect(data.connections);                    //then connect the connection
+              connections.current.push(conn.current);                                   //and add the connection to the connections array
+              SendReceive();
+            }                      
+          }
+        })
+        notification.current.innerHTML = "CONNECTION ESTABLISHED";             //notifies user that connection is established
         setTimeout(() => { notification.current.innerHTML = ""}, 4000);        //hides the notification after 4 secs
       })
+      element.on('close', () => {
+          receivedVideo.current.style.display="none";                            //hides video element
+          notification.current.innerHTML = "CONNECTION CLOSED";                  //notifies user that connection is closed
+          if(connections.current.indexOf(element)>-1){
+            connections.current.splice(connections.current.indexOf(element),1);  //removes the closed connection from connections array
+          }
+          setTimeout(() => { notification.current.innerHTML = ""}, 4000);        //hides the notification after 4 secs
+        })
+    });
   }
 
   //-------------------------------------------
@@ -96,13 +126,16 @@ function App() {
     if (calls.current){calls.current.close()}
     conn.current.close();
     connections.current.forEach((element) => {element.close()})     //disconnects from all connections
+    connections.current = [];                                       //clears the connections array
 
   }
   //-------------------------------------------
 
   const handleSend = (e) => {
-    connections.current.forEach((element)=>{element.send(messageRef.current.value)})  //sends the data to each connection
+    connections.current.forEach((element)=>{element.send({message:messageRef.current.value})})  //sends the data to each connection
     messageRef.current.value = "";
+    console.clear();
+    connections.current.forEach((e)=>{console.log(e.peer);})
   }
 
   //-------------------------------------------
@@ -115,6 +148,7 @@ function App() {
   //-------------------------------------------
 
   const handleDisconnectCall = (e) => {
+    conn.current.send({control:"disconnectCall"})                       //sends a user defined control "disconnectCall" along the message
     calls.current.close();                                              //disconnects the call
   }
 
@@ -137,7 +171,7 @@ function App() {
       <p  ref={notification}></p>
       <br/>
       <div className="videoContainer">
-        <video ref={myVideo} muted autoPlay/>
+        <video ref={myVideo} muted hidden autoPlay/>
         <video ref={receivedVideo} muted hidden autoPlay/>
       </div>
     </div>
