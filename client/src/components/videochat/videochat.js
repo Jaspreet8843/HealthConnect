@@ -1,7 +1,7 @@
 import React, {useEffect, useRef} from 'react';
-import './App.css';
+import './videochat.css';
 
-function App() {
+export default function VideoChat() {
   const myID = useRef('');                                  //stores current user ID
   const toUserRef = useRef();                               //stores ID of the other user
   const messageRef = useRef();                              //stores data from message input field
@@ -26,7 +26,7 @@ function App() {
 
 
     navigator.mediaDevices.getUserMedia({                   //fetches data from mediaDevices (webcam and mic)
-      video : {exact:{height:360}},
+      video: {width: {exact: 640}, height: {exact: 360}},
       audio : true
     })
     .then(stream =>{ 
@@ -221,11 +221,9 @@ function App() {
       <p  ref={notification}></p>
       <br/>
       <div className="videoContainer">
-        <video ref={myVideo} muted hidden autoPlay/>
-        <video ref={receivedVideo} muted hidden autoPlay/>
+        <video ref={myVideo} muted autoPlay/>
+        <video ref={receivedVideo} hidden autoPlay/>
       </div>
     </div>
   );
 }
-
-export default App;
