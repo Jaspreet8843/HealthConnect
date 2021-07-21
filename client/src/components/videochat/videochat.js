@@ -5,35 +5,49 @@ export default function VideoChat() {
   const myID = useRef('');                                  //stores current user ID
   const toUserRef = useRef();                               //stores ID of the other user
   const messageRef = useRef();                              //stores data from message input field
-  const sendRef = useRef();
-  const pasteRef = useRef();
+  const sendRef = useRef();                                 //send button
+  const pasteRef = useRef();                                //paste button
   const peer = useRef(new window.peerjs.Peer());            //peer object. ID changes each time it runs.
   const conn = useRef();                                    //connection object gets generated once connection is established
-  const connectConn = useRef();
-  const disconnectConn = useRef();
+  const connectConn = useRef();                             //connect button
+  const disconnectConn = useRef();                          //disconnect button
   const receivedMessage = useRef('');                       //stores received message data
   const myVideo = useRef();                                 //mediaStream (video) of current user
   const receivedVideo = useRef();                           //mediaStrean (video) of other user
   const calls = useRef();                                   //calls object generated once (video)call made or received
   const notification = useRef();                            //handles notifications
-  const answerCall = useRef();
-  const rejectCall = useRef();
-  const endCall = useRef();
-  const makeCall = useRef();
-//######################## USE EFFECT ###########################
+  const answerCall = useRef();                              //answer call button
+  const rejectCall = useRef();                              //reject call button
+  const endCall = useRef();                                 //end call button
+  const makeCall = useRef();                                //call button
+  const videoStreamParam = useRef(true);                    //video settings (quality & on/off)
+  const audioStreamParam = useRef(true);                    //true if audio is on, false otherwise
+  const blankVideoTrack = useRef(); 
 
+
+
+
+  //######################## USE EFFECT ###########################
+  
   useEffect(()=>{
-
-
-    navigator.mediaDevices.getUserMedia({                   //fetches data from mediaDevices (webcam and mic)
-      video: {width: {exact: 640}, height: {exact: 360}},
-      audio : true
-    })
+    console.log(window);
+      navigator.mediaDevices.getUserMedia(                  //fetches data from mediaDevices (webcam and mic)
+      {video: true,
+      audio: true
+      })
     .then(stream =>{ 
       myVideo.current.srcObject = stream;                   //initialises myVideo with audio and video tracks
     });
 
-    //-------------------------------------------
+
+    // blank/void track
+    const height = 360;
+      const width = 640;
+      const canvas = Object.assign(document.createElement('canvas'), { width, height });
+      canvas.getContext('2d').fillRect(0, 0, width, height);
+      blankVideoTrack.current = canvas.captureStream().getVideoTracks()[0];   
+
+
 
     peer.current.on('open', function(id) {
       
@@ -46,8 +60,6 @@ export default function VideoChat() {
         makeCall.current.style.display = "none";
         notification.current.innerHTML = "INCOMMING CALL... PLEASE ANSWER OR REJECT.";
         setTimeout(() => { notification.current.innerHTML = ""}, 4000);
-        //calls.current.answer(myVideo.current.srcObject);      //answers the call and passes current user's video stream
-        //onReceiveStream();                                    //sets receivedVideo video output element to the received stream
       });
 
       peer.current.on('connection', function(connection){     //event when connection is received
@@ -80,7 +92,7 @@ export default function VideoChat() {
           calls.current.close();                                                         //workaround to disconnect call bug
         }
         if(data.message)
-        {
+        { 
           receivedMessage.current.innerHTML += "<p>Received: "+data.message+"</p>";                //displays received data
         }
       })
@@ -112,6 +124,7 @@ export default function VideoChat() {
   //-------------------------------------------
 
   function onReceiveStream(){
+    console.log(calls.current)
     calls.current.on('stream', function(stream){
       myVideo.current.style.display = "inline";
       receivedVideo.current.style.display = "inline";
@@ -186,8 +199,8 @@ export default function VideoChat() {
   //-------------------------------------------
 
   const handleAnswerCall = (e) => {
-    calls.current.answer(myVideo.current.srcObject);
-    onReceiveStream();
+    calls.current.answer(myVideo.current.srcObject);                  //answers call when answer button is pressed
+    onReceiveStream();                                                //displays received stream
   }
 
   //-------------------------------------------
@@ -198,6 +211,54 @@ export default function VideoChat() {
     makeCall.current.style.display = "inline";
     calls.current.close();
     onReceiveStream();
+  }
+
+  //-------------------------------------------
+
+
+  const handleStreamChange = (e) => {
+    if(e.target.name === "videoQuality"){
+      
+      if(e.target.value === "240"){
+        videoStreamParam.current={width: {exact: 426}, height: {exact: 240}};
+      }
+      else if(e.target.value === "360"){
+        videoStreamParam.current={width: {exact: 640}, height: {exact: 360}};
+      }
+      else if(e.target.value === "480"){
+        videoStreamParam.current={width: {exact: 854}, height: {exact: 480}};
+      }
+      else if(e.target.value === "720"){
+        videoStreamParam.current={width: {exact: 1280}, height: {exact: 720}};
+      }
+      else{
+        videoStreamParam.current=true;
+      }  
+    }
+    else if(e.target.name === "videoToggle")
+    {
+      console.log("vtoggle");
+      if(videoStreamParam.current){
+        myVideo.current.srcObject.getVideoTracks()[0].enabled = false;
+        videoStreamParam.current=false;
+      }
+      else{
+        myVideo.current.srcObject.getVideoTracks()[0].enabled = true;
+        videoStreamParam.current=true;
+      }
+    }
+    else if(e.target.name === "audioToggle")
+    {
+      console.log("atoggle");
+      if(audioStreamParam.current){
+        myVideo.current.srcObject.getAudioTracks()[0].enabled = false;
+        audioStreamParam.current=false;
+      }
+      else{
+        myVideo.current.srcObject.getAudioTracks()[0].enabled = true;
+        audioStreamParam.current=true;
+      }
+    }
   }
 
 //####################### RENDER ############################
@@ -219,9 +280,46 @@ export default function VideoChat() {
       <button ref={endCall} onClick={handleDisconnectCall} hidden>END CALL</button>
       <br/>
       <p  ref={notification}></p>
+      <p>
+        <label htmlFor="videoQuality">Video Quality: </label>
+        <select id="videoQuality" name="videoQuality" onChange={handleStreamChange}>
+            <option value="auto">auto</option>
+            <option value="240">240p</option>
+            <option value="360">360p</option>
+            <option value="480">480p</option>
+            <option value="720">720p</option>
+            <option value="1080">1080p</option>
+        </select>
+        <label htmlFor="videoToggle"> Video: </label>
+        <input id="videoToggle" name="videoToggle" type="checkbox" onChange={handleStreamChange}/>
+        <label htmlFor="audioToggle"> Audio: </label>
+        <input id="audioToggle" name="audioToggle" type="checkbox" onChange={handleStreamChange}/>
+        <button onClick={()=>{
+          console.clear();
+          // console.log(myVideo.current.srcObject.getAudioTracks(), receivedVideo.current.srcObject.getAudioTracks());
+          // console.log(myVideo.current.srcObject.getVideoTracks(), receivedVideo.current.srcObject.getVideoTracks());
+          // myVideo.current.srcObject.getTracks().forEach((tracks)=> console.log(tracks));
+          console.log(peer.current, conn.current[0]);
+          //myVideo.current.srcObject.getAudioTracks()[0].stop();
+          //myVideo.current.srcObject.getVideoTracks()[0].stop();
+          //console.log(calls.current.peerConnection.removeTrack(calls.current.peerConnection.getSenders()[0]));
+
+        }
+          }>replace vid tracks</button>
+        
+        
+        
+        <button onClick={()=>{
+          console.clear();
+         
+          console.log(myVideo.current.srcObject.getVideoTracks());
+        }
+          }>view vid tracks</button>
+        
+      </p>
       <br/>
       <div className="videoContainer">
-        <video ref={myVideo} muted autoPlay/>
+        <video ref={myVideo} muted  hidden autoPlay/>
         <video ref={receivedVideo} hidden autoPlay/>
       </div>
     </div>
